@@ -1,0 +1,10 @@
+__pycache__/
+.DS_Store
+.eggs/
+neoload_compose.egg-info/
+junit-sla.xml
+Pipfile
+Pipfile.lock
+.coverage
+coverage.xml
+htmlcov/

@@ -1,0 +1,29 @@
+neoload-compose http --url http://nominatim.openstreetmap.org/search?format=json&q=Boston \
+                http --url http://httpbin.org/post --data '{"test":2}' \
+                delay --all --from 100 --to 1000 \
+                header --all --name "accept" value "application/json" \
+                validate --all --contains "OpenStreetMap" \
+                validate --all -not --contains "ERROR" \
+                load --ramp-to 50 --duration 3m \
+                sla --all --threshold error-rate --warn 5 --fail 10 \
+                sla --all --threshold avg-resp-time --warn 100ms --fail 250ms \
+                output --project ./test1
+
+neoload-compose api-endpoint --url http://nominatim.openstreetmap.org/search?format=json&q=Boston --ramp-to 50 --delay 500 --duration 3 --project ./test1
+
+http:
+  --method (defaults to GET unless --data which assumes POST)
+  --delay [default is 100ms]
+load:
+  --constant 10
+  --contains "OpenStreetMap"
+
+sla:
+  --per-test (otherwise defaults to per-interval)
+
+  rampup_load:
+    min_users: 1
+    max_users: 5
+    increment_users: 1
+    increment_every: 2s
+    duration: 1m
