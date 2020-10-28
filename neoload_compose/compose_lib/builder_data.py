@@ -14,6 +14,8 @@ from ruamel.yaml.comments import CommentedMap as ordereddict
 from neoload_cli_lib import cli_exception
 from compose_lib import common
 
+from neoload_compose import get_global_continue
+
 __builder_config_file = os.path.join(common.__config_dir, "builder.yaml")
 
 def reset():
@@ -49,7 +51,7 @@ def register_context(ctx, auto_reset=True):
             'position': len(ctx.parent.__dict__['heirarchy']),
             'ctx': ctx
         })
-        if is_first and auto_reset:
+        if is_first and auto_reset and not get_global_continue():
             logging.debug("AUTO-RESET on first command!")
             reset()
 
@@ -91,6 +93,7 @@ class HttpRequest(Action):
     def __init__(self, details):
         super(HttpRequest, self).__init__()
         self.details = details
+        self.headers = []
 
     @classmethod
     def to_yaml(cls,dumper,self):
@@ -99,10 +102,25 @@ class HttpRequest(Action):
                 'url': self.details['url'],
                 'method': self.details['method'] if self.details['method'] != "GET" else None,
                 'body': self.details['body'],
+                'headers': self.headers if len(self.headers) > 0 else None
             })
         }
 
         return dumper.represent_data(new_data)
+
+class Header:
+    def __init__(self, name, value, all):
+        self.name = name
+        self.value = value
+        self.all = all
+
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        new_data = {}
+        new_data[self.name] = self.value
+
+        return dumper.represent_data(new_data)
+
 
 class Delay(Action):
     def __init__(self, time):
@@ -292,6 +310,8 @@ def convert_builder_to_yaml(builder):
     current_scenario = default_scenario
     global_duration = DurationPolicy("1m")
     current_duration = global_duration
+    current_request = None
+    global_headers = []
 
     # recurse for appliables
     for item in builder.stack:
@@ -320,6 +340,20 @@ def convert_builder_to_yaml(builder):
 
         if type(item) is DurationPolicy:
             current_duration = item
+
+        if type(item) is HttpRequest:
+            current_request = item
+
+        if type(item) is Header:
+            if current_request is None:
+                if item.all:
+                    global_headers.append(item)
+            else:
+                if item.all:
+                    apply_header_to_user_path(item, current_path)
+                else:
+                    current_request.headers.append(item)
+
 
         last_item = item
 
@@ -367,11 +401,28 @@ def convert_builder_to_yaml(builder):
     yaml.register_class(ConstantPolicy)
     yaml.register_class(Population)
     yaml.register_class(Scenario)
+    yaml.register_class(Header)
 
     fun = MyLogger()
     yaml.encoding = None
     yaml.dump(project, fun, transform=strip_python_tags)
     return fun.readAll()
+
+
+def apply_header_to_user_path(item, user_path):
+    apply_header_to_container(item, user_path.init, recurse=True)
+    apply_header_to_container(item, user_path.actions, recurse=True)
+    apply_header_to_container(item, user_path.end, recurse=True)
+
+
+def apply_header_to_container(item, container, recurse=False):
+    reqs = list(filter(lambda step: type(step) is HttpRequest,container.steps))
+    for req in reqs:
+        req.headers.append(item)
+    if recurse:
+        containers = list(filter(lambda step: type(step) is Container or issubclass(type(step), Container), container.steps))
+        for c in containers:
+            apply_header_to_container(item, c, recurse=recurse)
 
 
 class MyLogger():

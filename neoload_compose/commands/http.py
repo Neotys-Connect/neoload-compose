@@ -1,6 +1,6 @@
 import sys
 import click
-
+import logging
 from neoload.neoload_cli_lib import cli_exception
 from compose_lib import builder_data
 
@@ -27,6 +27,11 @@ def cli(ctx, get, post, put, patch, delete, body):
     if details is None:
         raise cli_exception.CliException("You have not provided a proper argument to create the HTTP action from")
     else:
+        if body == "-":
+            stdin_text = click.get_text_stream('stdin')
+            body = stdin_text.read()
+            logging.debug(body)
+
         details['body'] = body
 
     builder = builder_data.get() \

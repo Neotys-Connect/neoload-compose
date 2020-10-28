@@ -10,6 +10,8 @@ from version import __version__
 
 import urllib3
 
+from . import set_global_continue
+
 urllib3.disable_warnings()
 
 plugin_folder = os.path.join(os.path.dirname(__file__), 'commands')
@@ -49,11 +51,13 @@ class NeoLoadCompose(click.MultiCommand):
         else:
             raise cli_exception.CliException("\"" + name + "\" is not a neoload-compose command")
 
+__global_continue = False
 
 @click.command(cls=NeoLoadCompose, help='', chain=True)
 @click.option('--debug', default=False, is_flag=True)
+@click.option('--continuation', '--continue', default=False, is_flag=True)
 @click.version_option(compute_version())
-def cli(debug):
+def cli(debug, continuation):
     if debug:
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
@@ -62,13 +66,14 @@ def cli(debug):
         requests_log.propagate = True
         cli_exception.CliException.set_debug(True)
 
+    set_global_continue(continuation)
+
     try:
         if tools.is_color_terminal():
             coloredlogs.install(level=logging.getLogger().level)
     except:
         if sys.stdin.isatty():
             coloredlogs.install(level=logging.getLogger().level)
-
 
 
 if __name__ == '__main__':
