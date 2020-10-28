@@ -10,7 +10,7 @@ from compose_lib import builder_data
 @click.option("--inside", is_flag=True, default=False, help="Append this transaction inside prior transaction")
 @click.pass_context
 def cli(ctx, name, description, inside):
-    """This is the transaction command
+    """Adds a transaction to the builder queue; do before requests
     """
     builder_data.register_context(ctx)
 

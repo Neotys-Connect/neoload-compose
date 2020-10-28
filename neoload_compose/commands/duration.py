@@ -8,7 +8,7 @@ from compose_lib import builder_data
 @click.argument("duration", type=str)
 @click.pass_context
 def cli(ctx, duration):
-    """Defines a duration policy for items where a specific duration hasn't been specified
+    """Defines a duration policy for the current scenario
     """
     builder_data.register_context(ctx)
 

@@ -15,11 +15,14 @@ def cli(ctx, spec, name, value, all):
     """
     builder_data.register_context(ctx)
 
+    if name == "-":
+        name = None
+
     if name and not value or value and not name:
         raise ValueError("If you specify either name or value arguments, you must provide both.")
 
     if spec and (name or value):
-        raise ValueError("If you specify a name/value spec, you cannot also specify name and/or value arguments.")
+        raise ValueError("If you specify a name/value spec, you must specify a '-' for the spec.")
 
     if spec:
         parts = spec.split("=")

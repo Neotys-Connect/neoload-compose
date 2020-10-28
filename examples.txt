@@ -7,9 +7,9 @@ neoload-compose or neoloadc (alias)
 
 neoloadc transaction One http --get http://httpbin.org/get?test=123 delay 1s \
          transaction Two http --post http://httpbin.org/post --body '${var}' delay 250ms \
-         header --name "accept" --value "application/json" \
+         header 'accept=application/json' \
          ramp --to 10 --per 1s \
-         duration 2m \
+         duration 2m current \
          run --zone $NLW_ZONE_STATIC MyTest
 
 # continuation, particularly when reading large contents from STDIN
@@ -33,3 +33,10 @@ neoloadc run --save --zone $NLW_ZONE_STATIC
 ...or...
 neoloadc config zone $NLW_ZONE_STATIC test-setting MyTest
 neoloadc run
+
+
+TODO:
+- extractors
+- file variables
+- includes
+- curl and wget compat for http requests?

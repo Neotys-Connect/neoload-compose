@@ -55,7 +55,7 @@ __global_continue = False
 
 @click.command(cls=NeoLoadCompose, help='', chain=True)
 @click.option('--debug', default=False, is_flag=True)
-@click.option('--continuation', '--continue', default=False, is_flag=True)
+@click.option('--continuation', '--continue', '-c', default=False, is_flag=True, help="Append to exiting builder queue, otherwise each separate shell call to this utility resets the builder 'working queue'")
 @click.version_option(compute_version())
 def cli(debug, continuation):
     if debug:

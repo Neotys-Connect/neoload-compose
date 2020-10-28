@@ -10,10 +10,11 @@ from compose_lib import builder_data
 @click.option('--put', help="The URL to use in a PUT http request")
 @click.option('--patch', help="The URL to use in a PATCH http request")
 @click.option('--delete', help="The URL to use in a DELETE http request")
+@click.option('--option', help="The URL to use in a OPTION http request")
 @click.option('--body', help="The body contents to send")
 @click.pass_context
 def cli(ctx, get, post, put, patch, delete, body):
-    """This is the action command
+    """Adds an HTTP request to the builder queue
     """
     builder_data.register_context(ctx)
 
@@ -23,14 +24,15 @@ def cli(ctx, get, post, put, patch, delete, body):
     if details is None: details = process_details("PUT", put)
     if details is None: details = process_details("PATCH", patch)
     if details is None: details = process_details("DELETE", delete)
+    if details is None: details = process_details("OPTION", option)
 
     if details is None:
         raise cli_exception.CliException("You have not provided a proper argument to create the HTTP action from")
     else:
         if body == "-":
+            logging.debug("http subcommand using stdin")
             stdin_text = click.get_text_stream('stdin')
             body = stdin_text.read()
-            logging.debug(body)
 
         details['body'] = body
 

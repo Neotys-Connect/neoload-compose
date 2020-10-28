@@ -7,11 +7,15 @@ import subprocess
 
 @click.group(chain=True)
 def cli():
+    """Configure this utility to simplify some commands
+    """
     pass
 
 @cli.command('reset')
 @click.option("--confirm", is_flag=True, default=False, help="Must confirm that you want to reset the profile data")
 def reset(confirm):
+    """
+    """
     if confirm != True:
         raise cli_exception.CliException("You must use the --confirm option")
 

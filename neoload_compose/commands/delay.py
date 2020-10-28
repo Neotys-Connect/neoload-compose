@@ -8,7 +8,7 @@ from compose_lib import builder_data
 @click.argument("duration", type=str)
 @click.pass_context
 def cli(ctx, duration):
-    """This is the delay command
+    """Adds a delay (think time) to the builder queue
     """
     builder_data.register_context(ctx)
 
