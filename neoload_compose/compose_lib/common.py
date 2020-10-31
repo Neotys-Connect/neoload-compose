@@ -39,3 +39,11 @@ def __load_data(config_file):
                 logging.warning("Could not load from file {}".format(config_file))
 
     return None
+
+def remove_empty(od):
+    rems = []
+    for key in od.keys():
+        if od[key] is None: rems.append(key)
+    for key in rems:
+        del od[key]
+    return od

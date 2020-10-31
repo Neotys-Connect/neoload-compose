@@ -98,7 +98,7 @@ class HttpRequest(Action):
     @classmethod
     def to_yaml(cls,dumper,self):
         new_data = {
-            'request': remove_empty({
+            'request': common.remove_empty({
                 'url': self.details['url'],
                 'method': self.details['method'] if self.details['method'] != "GET" else None,
                 'body': self.details['body'],
@@ -162,7 +162,7 @@ class Container(ContainableItem):
 
     @classmethod
     def to_yaml(cls,dumper,self):
-        new_data = remove_empty({
+        new_data = common.remove_empty({
             'name': self.name,
             'description': self.description,
             'steps': self.steps,
@@ -178,7 +178,7 @@ class Transaction(Container):
     @classmethod
     def to_yaml(cls,dumper,self):
         new_data = {
-            'transaction': remove_empty({
+            'transaction': common.remove_empty({
                 'name': self.name,
                 'description': self.description,
                 'steps': self.steps,
@@ -198,7 +198,7 @@ class UserPath():
     @classmethod
     def to_yaml(cls,dumper,self):
         #logging.debug(cls.yaml_flow_style)
-        new_data = remove_empty(ordereddict({
+        new_data = common.remove_empty(ordereddict({
             'name': self.name,
             'description': self.description,
         }))
@@ -223,7 +223,7 @@ class Scenario:
     @classmethod
     def to_yaml(cls,dumper,self):
         #logging.debug(cls.yaml_flow_style)
-        scn_data = remove_empty(ordereddict({
+        scn_data = common.remove_empty(ordereddict({
             'name': self.name,
             'description': self.description,
             'populations': []
@@ -277,7 +277,7 @@ class RampPolicy(VariationPolicy):
 
     def provide_inner_data(self):
         ret = {
-            'rampup_load': remove_empty(ordereddict({
+            'rampup_load': common.remove_empty(ordereddict({
                 'min_users': 1,
                 'max_users': self.to,
                 'increment_users': self.by,
@@ -286,14 +286,6 @@ class RampPolicy(VariationPolicy):
             }))
         }
         return ret
-
-def remove_empty(od):
-    rems = []
-    for key in od.keys():
-        if od[key] is None: rems.append(key)
-    for key in rems:
-        del od[key]
-    return od
 
 def convert_builder_to_yaml(builder):
     user_paths = []

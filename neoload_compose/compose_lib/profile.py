@@ -1,6 +1,9 @@
 from compose_lib import common
 import os
 
+from collections import OrderedDict
+from ruamel.yaml.comments import CommentedMap as ordereddict
+
 __profile_config_file = os.path.join(common.__config_dir, "profile.yaml")
 
 def reset():
@@ -38,6 +41,12 @@ class ProfileData(common.StorableConfig):
         self.default_test_setting = zone
         return self
 
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        #logging.debug(cls.yaml_flow_style)
+        data = common.remove_empty(ordereddict(self.__dict__))
+
+        return dumper.represent_data(data)
 
 
 

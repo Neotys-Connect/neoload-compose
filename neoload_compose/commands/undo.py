@@ -6,7 +6,7 @@ from compose_lib import builder_data
 import os
 
 @click.command()
-@click.argument("back", type=int)
+@click.argument("back", type=int, default=1)
 @click.pass_context
 def cli(ctx, back):
     """Rolls back the prior [back] number of builder commands

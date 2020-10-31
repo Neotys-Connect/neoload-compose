@@ -17,7 +17,8 @@ setup(
     entry_points={
         'console_scripts': [
             'neoload-compose=neoload_compose.__main__:cli',
-            'neoloadc=neoload_compose.__main__:cli'
+            'neoloadc=neoload_compose.__main__:cli',
+            'nlc=neoload_compose.__main__:cli'
         ]
     },
     setup_requires=['setuptools_scm'],

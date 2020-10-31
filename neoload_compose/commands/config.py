@@ -1,9 +1,12 @@
 import sys
 import click
+import ruamel.yaml
 
 from compose_lib import profile
 import tempfile
 import subprocess
+
+yaml = ruamel.yaml.YAML()
 
 @click.group(chain=True)
 def cli():
@@ -20,6 +23,12 @@ def reset(confirm):
         raise cli_exception.CliException("You must use the --confirm option")
 
     profile.reset()
+
+@cli.command('current')
+def current():
+    yaml.register_class(profile.ProfileData)
+    yaml.dump(profile.get(), sys.stdout)
+
 
 @cli.command('zone')
 @click.argument("name_or_id")

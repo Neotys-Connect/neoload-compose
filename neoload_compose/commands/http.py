@@ -13,7 +13,7 @@ from compose_lib import builder_data
 @click.option('--option', help="The URL to use in a OPTION http request")
 @click.option('--body', help="The body contents to send")
 @click.pass_context
-def cli(ctx, get, post, put, patch, delete, body):
+def cli(ctx, get, post, put, patch, delete, option, body):
     """Adds an HTTP request to the builder queue
     """
     builder_data.register_context(ctx)
