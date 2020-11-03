@@ -61,6 +61,27 @@ NeoLoad Compose can be referenced by any of the following command names:
 - neoloadc
 - nlc
 
+## Running a test through NeoLoad Compose
+NeoLoad Compose can also be used to run tests, but there are a few prerequisites:
+
+- [NeoLoad CLI](https://github.com/Neotys-Labs/neoload-cli) must already be installed
+- The NeoLoad CLI must already be logged in to an instance of NeoLoad Web
+- You must have load infrastructure available in a NeoLoad Web Zone
+- You must pre-configure NeoLoad Compose with a Zone and test-settings Name
+
+To log in to your NeoLoad CLI:
+```
+neoload login --url [your_neoload_web_api_url] [your_neoload_web_api_token]
+```
+To pre-configure NeoLoad Compose:
+```
+nlc config zone [zone_code] test-setting [a_unique_test_name]
+```
+If you simply want to use any zone with at least one available controller and load generator:
+```
+nlc config zone any
+```
+
 ## More Verbose Examples
 NeoLoad Compose functionality goes far Beyond the TL;DR section example, as clearly seen in the following verbose examples.
 
@@ -73,7 +94,7 @@ nlc transaction GetAndPost \
             --jsonpath ".headers['X-Amzn-Trace-Id']" \
             --regexp "=(.*)" \
     http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" delay 1s \
-    sla --name PostSLA per-interval --error-rate --warn ">= 10%" --fail ">= 20%" \
+    sla --name PostSLA per-interval --error-rate --warn ">= 10%" --fail ">= 20%"
 ```
 ### Bulk-data injection into request body
 ```
