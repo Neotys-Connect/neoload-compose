@@ -74,13 +74,17 @@ nlc transaction GetAndPost \
             --regexp "=(.*)" \
     http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" delay 1s \
     sla --name PostSLA per-interval --error-rate --warn ">= 10%" --fail ">= 20%" \
-
+```
+### Bulk-data injection into request body
+```
 # reads the contents of a file in and uses them as the body content of a PUT
 cat ./body_data.json | nlc -c \
     transaction PostBodyFile \
     http --put http://httpbin.org/put --body - \
     delay 1s
-
+```
+### Credentials (Username / Password) from CSV file
+```
 # grabs credentials (username/password) from a CSV file to use in an HTTP POST
 nlc -c \
     transaction AuthenticateUNP \
@@ -89,7 +93,9 @@ nlc -c \
     http --post http://httpbin.org/post?action=login \
          --body "{'username':'${creds.uname}','password':'${creds.pwd}'}" \
     delay 1s
-
+```
+### Secret token from a file as API authentication Header
+```
 # read the contents of a file in as a static API token
 cat ./recently_generated_token.txt | nlc -c \
     transaction AuthenticateToken \
@@ -97,7 +103,9 @@ cat ./recently_generated_token.txt | nlc -c \
     http --post http://httpbin.org/post?action=login \
     header "api_token=${api_token}" \
     delay 1s
-
+```
+### Add ramp and duration (Scenario data)
+```
 # adds variation & duration policies then prints out the YAML before running it
 nlc -c \
     ramp --to 10 --per 1s \
