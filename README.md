@@ -72,8 +72,8 @@ nlc transaction GetAndPost \
     extract --name traceId \
             --jsonpath ".headers['X-Amzn-Trace-Id']" \
             --regexp "=(.*)" \
-    http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
-    delay 1s
+    http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" delay 1s \
+    sla --name PostSLA per-interval --error-rate --warn ">= 10%" --fail ">= 20%" \
 
 # reads the contents of a file in and uses them as the body content of a PUT
 cat ./body_data.json | nlc -c \
