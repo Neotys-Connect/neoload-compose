@@ -70,42 +70,33 @@ NeoLoad Compose functionality goes far Beyond the TL;DR section example, as clea
 nlc transaction GetAndPost \
     http --get http://httpbin.org/get?test=123 delay 1s \
     extract --name traceId \
-            --jsonpath ".headers['X-Amzn-Trace-Id']"
+            --jsonpath ".headers['X-Amzn-Trace-Id']" \
             --regexp "=(.*)" \
     http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
-    delay 1s \
-```
-### Bulk-data injection into request body
-```
+    delay 1s
+
 # reads the contents of a file in and uses them as the body content of a PUT
 cat ./body_data.json | nlc -c \
-    transaction PostBodyFile
+    transaction PostBodyFile \
     http --put http://httpbin.org/put --body - \
     delay 1s
-```
-### Credentials (Username / Password) from CSV file
-```
+
 # grabs credentials (username/password) from a CSV file to use in an HTTP POST
 nlc -c \
     transaction AuthenticateUNP \
     variable --name creds \
-      file --columns uname,pwd ./recently_generated_credentials.csv
+      file --columns uname,pwd ./recently_generated_credentials.csv \
     http --post http://httpbin.org/post?action=login \
          --body "{'username':'${creds.uname}','password':'${creds.pwd}'}" \
-    delay 1s \
-```
-### Secret token from a file as API authentication Header
-```
+    delay 1s
+
 # read the contents of a file in as a static API token
 cat ./recently_generated_token.txt | nlc -c \
     transaction AuthenticateToken \
     variable --name api_token constant - \
     http --post http://httpbin.org/post?action=login \
     header "api_token=${api_token}" \
-    delay 1s \
-```
-### Add ramp and duration (Scenario data)
-```
+    delay 1s
 
 # adds variation & duration policies then prints out the YAML before running it
 nlc -c \
@@ -113,4 +104,5 @@ nlc -c \
     duration 2m \
     current \
     run --zone any MyTest
+
 ```

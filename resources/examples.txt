@@ -5,11 +5,16 @@ neoload-compose or nlc (alias)
 
 2020:
 
+nlc transaction GetAndPost   http --get http://httpbin.org/get?test=123   delay 1s
+nlc -c extract --name traceId --jsonpath ".headers['X-Amzn-Trace-Id']" --regexp "=(.*)"
+nlc -c http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
+    delay 1s \
+
 # gets a trace token from one request and uses it in the header of another
 nlc transaction GetAndPost \
     http --get http://httpbin.org/get?test=123 delay 1s \
     extract --name traceId \
-            --jsonpath ".headers['X-Amzn-Trace-Id']"
+            --jsonpath ".headers['X-Amzn-Trace-Id']" \
             --regexp "=(.*)" \
     http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
     delay 1s \
@@ -37,7 +42,7 @@ cat ./recently_generated_token.txt | nlc -c \
     header "api_token=${api_token}" \
     delay 1s \
 
-# adds variation and duration policies to a test and prints out the YAML before running it
+# adds variation & duration policies then prints out the YAML before running it
 nlc -c \
     ramp --to 10 --per 1s \
     duration 2m \

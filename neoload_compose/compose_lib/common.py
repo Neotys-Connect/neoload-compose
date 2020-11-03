@@ -3,6 +3,9 @@ import os
 import jsonpickle
 import logging
 
+from neoload.neoload_cli_lib import tools
+import subprocess
+
 __conf_name = "neoload-compose"
 __version = "1.0"
 __author = "neotys"
@@ -47,3 +50,65 @@ def remove_empty(od):
     for key in rems:
         del od[key]
     return od
+
+def os_return(command, status=False, connect_stdout=True):
+    if status:
+        print("Running '{}'".format(command))
+
+    actual_command = parse_command(command)
+
+    if connect_stdout:
+        p = subprocess.Popen(actual_command, stdout=subprocess.PIPE)
+        p.wait()
+    else:
+        p = subprocess.Popen(actual_command)
+    return p
+
+def os_run(command, status=False, print_stdout=False):
+    if status:
+        print("Running '{}'".format(command))
+    try:
+        if not print_stdout:
+            proc = os_return(command, status=False)
+            (stdout,strerr) = proc.communicate()
+            if proc.returncode != 0:
+                tools.system_exit({'code':proc.returncode,'message':"{}".format(strerr)})
+                return
+        else:
+            subprocess.run(parse_command(command), check = True)
+
+        return True
+    except subprocess.CalledProcessError as err:
+        tools.system_exit({'code':err.returncode,'message':"{}".format(err)})
+        return False
+
+def parse_command(command):
+    actual_command = []
+    parts = command.split()
+
+    combine = False
+    for part in parts:
+        if combine:
+            actual_command[-1] += " " + part
+        else:
+            if part.startswith("\"") or part.startswith("'"):
+                combine = True
+
+            actual_command.append(part)
+
+        if part.endswith("\"") or part.endswith("'"):
+            combine = False
+
+    final_parts = []
+    for p in actual_command:
+        part = "{}".format(p)
+        if part.startswith("\"") or part.startswith("'"):
+            part = part[1:]
+        if part.endswith("\"") or part.endswith("'"):
+            part = part[:-1]
+        final_parts.append(part)
+
+    return final_parts
+
+def find_nlg_app():
+    return "/Applications/NeoLoad 7.6/bin/NeoLoadGUI.app/Contents/MacOS/NeoLoad"

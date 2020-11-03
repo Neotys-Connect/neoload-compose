@@ -11,8 +11,10 @@ setup(
     name='neoload-compose',
     package_data={'': [
         'LICENSE',
-        'README.md'
+        'README.md',
+        'resources/dist/*'
     ]},
+    include_package_data=True,
     packages=find_packages(exclude=("tests",)),
     entry_points={
         'console_scripts': [

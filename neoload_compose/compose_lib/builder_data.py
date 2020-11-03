@@ -94,6 +94,8 @@ class HttpRequest(Action):
         super(HttpRequest, self).__init__()
         self.details = details
         self.headers = []
+        self.extractors = []
+        self.sla_profile = None
 
     @classmethod
     def to_yaml(cls,dumper,self):
@@ -102,9 +104,96 @@ class HttpRequest(Action):
                 'url': self.details['url'],
                 'method': self.details['method'] if self.details['method'] != "GET" else None,
                 'body': self.details['body'],
-                'headers': self.headers if len(self.headers) > 0 else None
+                'headers': self.headers if len(self.headers) > 0 else None,
+                'extractors': self.extractors if len(self.extractors) > 0 else None,
+                'sla_profile': self.sla_profile if 'sla_profile' in self.__dict__ else None
             })
         }
+
+        return dumper.represent_data(new_data)
+
+class Extractor():
+    def __init__(self, name, jsonpath, xpath, regexp, from_, match_number, template, decode, extract_once, default, throw_error):
+        self.details = {
+            'name': name,
+            'jsonpath': jsonpath,
+            'xpath': xpath,
+            'regexp': regexp,
+            'from': from_,
+            'match_number': match_number,
+            'template': template,
+            'decode': decode,
+            'extract_once': extract_once,
+            'default': default,
+            'throw_assertion_error': throw_error
+        }
+
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        new_data = {
+            'name': self.details['name']
+        }
+        self.add_default(new_data, 'jsonpath', None)
+        self.add_default(new_data, 'xpath', None)
+        self.add_default(new_data, 'regexp', None)
+        self.add_default(new_data, 'from', 'body')
+        self.add_default(new_data, 'match_number', 1)
+        self.add_default(new_data, 'template', '$1$')
+        self.add_default(new_data, 'decode', None)
+        self.add_default(new_data, 'extract_once', False)
+        self.add_default(new_data, 'default', None)
+        self.add_default(new_data, 'throw_assertion_error', True)
+
+        new_data = common.remove_empty(new_data)
+
+        return dumper.represent_data(new_data)
+
+    def add_default(self, to_col, key, defaultValue):
+        if key in self.details:
+            #to_col[key] = self.details[key] if self.details[key] is not None else defaultValue
+            to_col[key] = self.details[key]
+
+class SLAThreshold():
+    def __init__(self, name, scope, warn, fail, kpis):
+        if not (kpis is not None and len(kpis) > 0):
+            raise ValueError("Error in SLAThreshold: no kpi flags to be recorded!")
+
+        self.details = {
+            'name': name,
+            'scope': scope,
+            'warn': warn,
+            'fail': fail,
+            'kpis': kpis
+        }
+
+class SLA():
+    def __init__(self, name):
+        self.name = name
+        self.thresholds = []
+
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        new_data = {
+            'name': self.name,
+            'thresholds': []
+        }
+        for threshold in self.thresholds:
+            str_value = ""
+            kpis = threshold.details['kpis']
+            for key in kpis.keys():
+                if kpis[key] == True:
+                    str_value = key
+                    if threshold.details['warn'] is not None:
+                        str_value += " warn {}".format(threshold.details['warn'])
+                    if threshold.details['fail'] is not None:
+                        str_value += " fail {}".format(threshold.details['fail'])
+
+                    str_value += " {}".format(threshold.details['scope'])
+                    break
+
+            new_data['thresholds'].append(str_value)
+
+        logging.debug(new_data)
 
         return dumper.represent_data(new_data)
 
@@ -159,6 +248,7 @@ class Container(ContainableItem):
         self.name = name
         self.description = description
         self.steps = []
+        self.sla_profile = None
 
     @classmethod
     def to_yaml(cls,dumper,self):
@@ -166,6 +256,7 @@ class Container(ContainableItem):
             'name': self.name,
             'description': self.description,
             'steps': self.steps,
+            'sla_profile': self.sla_profile
         })
 
         return dumper.represent_data(new_data)
@@ -182,6 +273,7 @@ class Transaction(Container):
                 'name': self.name,
                 'description': self.description,
                 'steps': self.steps,
+                'sla_profile': self.sla_profile if 'sla_profile' in self.__dict__ else None
             })
         }
 
@@ -263,7 +355,8 @@ class ConstantPolicy(VariationPolicy):
     def provide_inner_data(self):
         ret = {
             'constant_load': {
-                'users': self.vus
+                'users': self.vus,
+                'duration': self.duration
             }
         }
         return ret
@@ -304,6 +397,7 @@ def convert_builder_to_yaml(builder):
     current_duration = global_duration
     current_request = None
     global_headers = []
+    all_slas = []
 
     # recurse for appliables
     for item in builder.stack:
@@ -346,6 +440,30 @@ def convert_builder_to_yaml(builder):
                 else:
                     current_request.headers.append(item)
 
+        if type(item) is Extractor:
+            if current_request is not None:
+                current_request.extractors.append(item)
+
+        if type(item) is SLAThreshold:
+            # add an SLA object to all_slas
+            threshold = item
+            sla_name = threshold.details['name']
+            found_sla = list(filter(lambda sla: sla.name == sla_name, all_slas))
+            if len(found_sla) > 0:
+                found_sla = found_sla[0]
+            else:
+                found_sla = SLA(sla_name)
+                all_slas.append(found_sla)
+
+            # add this threshold to that object's thresholds
+            found_sla.thresholds.append(threshold)
+
+            # apply this named sla to the last_item if request or transaction
+            prior_sla_item = current_request
+            if prior_sla_item is None:
+                prior_sla_item = container_heirarchy[-1]
+            if type(prior_sla_item) is Transaction or type(prior_sla_item) is HttpRequest:
+                prior_sla_item.sla_profile = found_sla.name
 
         last_item = item
 
@@ -370,7 +488,8 @@ def convert_builder_to_yaml(builder):
         'name': 'Project1',
         'user_paths': user_paths,
         'populations': [],
-        'scenarios': scenarios
+        'scenarios': scenarios,
+        'sla_profiles': []
     }
 
     for scn in scenarios:
@@ -379,6 +498,12 @@ def convert_builder_to_yaml(builder):
                 'name': holder['population'].name,
                 'user_paths': list(map(lambda p: { 'name': p.name, 'distribution': '100%' }, holder['population'].paths))
             })
+
+    for sla in all_slas:
+        project['sla_profiles'].append(sla)
+
+    if len(project['sla_profiles']) < 1:
+        del project['sla_profiles']
 
     yaml = ruamel.yaml.YAML()
 
@@ -394,6 +519,8 @@ def convert_builder_to_yaml(builder):
     yaml.register_class(Population)
     yaml.register_class(Scenario)
     yaml.register_class(Header)
+    yaml.register_class(Extractor)
+    yaml.register_class(SLA)
 
     fun = MyLogger()
     yaml.encoding = None
@@ -472,6 +599,8 @@ def write_to_path(path, output):
 
     with open(path, "w+") as stream:
         stream.write(output)
+
+    return path
 
 
 

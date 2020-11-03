@@ -49,7 +49,8 @@ def cli(ctx, name_or_id, zone, scenario, save):
     if not zone:
         raise ValueError("No --zone provided and no default zone configured!")
 
-    os_run("neoload status", status=False)
+    if not os_run("neoload status", status=False):
+        return
 
     yaml_str = builder_data.convert_builder_to_yaml(builder_data.get())
     data = yaml.safe_load(yaml_str)
@@ -62,12 +63,15 @@ def cli(ctx, name_or_id, zone, scenario, save):
         dir = tmp
         builder_data.write_to_path(dir, yaml_str)
 
-        os_run("neoload test-settings --zone {} --lgs 1 --scenario {} createorpatch {}".format(zone, scenario, name_or_id), status=True)
+        if not os_run("neoload test-settings --zone {} --lgs 1 --scenario {} createorpatch {}".format(zone, scenario, name_or_id), status=True):
+            return
 
-        os_run("neoload project --path {} up".format(dir), status=True)
+        if not os_run("neoload project --path {} up".format(dir), status=True):
+            return
 
 
-    os_run("neoload run".format(scenario), print_stdout=True)
+    if not os_run("neoload run".format(scenario), print_stdout=True):
+        return
 
 
     proc = os_return("neoload report --help", status=False)
@@ -78,21 +82,14 @@ def cli(ctx, name_or_id, zone, scenario, save):
         import pkg_resources
 
         template = pkg_resources.resource_filename(__name__, 'resources/dist/jinja/builtin-console-summary.j2')
-        # add_if_not('summary',default_retrieve)
-        # add_if_not('statistics',default_retrieve)
-        # add_if_not('slas',default_retrieve)
-        # add_if_not('events',default_retrieve)
-        # add_if_not('transactions',default_retrieve)
-        # add_if_not('all_requests',default_retrieve)
-        # add_if_not('ext_data',default_retrieve)
-        # add_if_not('controller_points',default_retrieve)
 
-        os_run("neoload report --template {} --filter '{}' --max-rps 5 cur".format(
+        if not os_run("neoload report --template {} --filter '{}' --max-rps 5 cur".format(
                     template,
                     'exclude=events,slas,all_requests,ext_data,controller_points'
                 ),
                 status=True,
-                print_stdout=True)
+                print_stdout=True):
+            return
 
 
 def os_return(command, status=False):
@@ -114,5 +111,8 @@ def os_run(command, status=False, print_stdout=False):
                 return
         else:
             subprocess.run(command.split(), check = True)
+
+        return True
     except subprocess.CalledProcessError as err:
         tools.system_exit({'code':err.returncode,'message':"{}".format(err)})
+        return False
