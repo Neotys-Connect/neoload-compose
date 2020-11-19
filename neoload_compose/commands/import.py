@@ -3,6 +3,7 @@ import click
 import logging
 from neoload.neoload_cli_lib import cli_exception, tools
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 import json
 import re
 import urllib.parse
@@ -13,6 +14,7 @@ import os
 import os.path
 
 @click.group(chain=True)
+@CommandCategory("Converting")
 def cli():
     """Configure this utility to simplify some commands
     """

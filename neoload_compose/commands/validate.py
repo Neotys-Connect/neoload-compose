@@ -2,6 +2,7 @@ import sys
 import click
 
 from compose_lib import builder_data, profile
+from compose_lib.command_category import CommandCategory
 from commands import config
 import tempfile
 import subprocess
@@ -34,6 +35,7 @@ class SubprocessEvent():
 @click.command()
 @click.argument("file", required=False)
 @click.pass_context
+@CommandCategory("Validating")
 def cli(ctx, file):
     """Uses the local NeoLoad installation to try a project
     """

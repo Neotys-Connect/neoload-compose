@@ -1,6 +1,8 @@
 import sys
 import click
 
+from compose_lib.command_category import CommandCategory
+
 @click.command()
 def cli():
     """Provides simple examples of usage

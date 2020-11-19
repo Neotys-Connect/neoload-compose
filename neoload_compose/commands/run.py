@@ -7,6 +7,7 @@ import tempfile
 import yaml
 import json
 from compose_lib.common import os_run, os_return
+from compose_lib.command_category import CommandCategory
 
 from neoload.neoload_cli_lib import tools
 
@@ -16,6 +17,7 @@ from neoload.neoload_cli_lib import tools
 @click.option('--scenario', required=False, help="The scenario to run.")
 @click.option('--save', is_flag=True, help="Save this as the default zone and test-setting")
 @click.pass_context
+@CommandCategory("Validating")
 def cli(ctx, name_or_id, zone, scenario, save):
     """Runs whatever is in the current buffer
     """

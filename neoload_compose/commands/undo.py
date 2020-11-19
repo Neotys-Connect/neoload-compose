@@ -2,12 +2,14 @@ import sys
 import click
 
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 
 import os
 
 @click.command()
 @click.argument("back", type=int, default=1)
 @click.pass_context
+@CommandCategory("Composing Queue Management")
 def cli(ctx, back):
     """Rolls back the prior [back] number of builder commands
     """

@@ -3,6 +3,7 @@ import click
 
 from neoload.neoload_cli_lib import cli_exception, tools
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 
 current_name = None
 
@@ -27,6 +28,7 @@ current_name = None
 
 @click.group(chain=True)
 @click.option("--name", required=True, help="Name of the SLA profile")
+@CommandCategory("Composing")
 def cli(name):
     """Create and apply an SLA of type per-interval or per-test
     """

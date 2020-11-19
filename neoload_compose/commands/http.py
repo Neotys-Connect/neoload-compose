@@ -3,6 +3,7 @@ import click
 import logging
 from neoload.neoload_cli_lib import cli_exception
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 
 @click.command()
 @click.option('--get', help="The URL to use in a GET http request")
@@ -13,6 +14,7 @@ from compose_lib import builder_data
 @click.option('--option', help="The URL to use in a OPTION http request")
 @click.option('--body', help="The body contents to send")
 @click.pass_context
+@CommandCategory("Composing")
 def cli(ctx, get, post, put, patch, delete, option, body):
     """Adds an HTTP request to the builder queue
     """

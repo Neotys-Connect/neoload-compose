@@ -3,6 +3,7 @@ import click
 
 from neoload.neoload_cli_lib import cli_exception
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 
 @click.command()
 @click.argument("spec", required=False, type=str)
@@ -10,6 +11,7 @@ from compose_lib import builder_data
 @click.option('--value', '-v', required=False, help="The value of the header")
 @click.option('--all', is_flag=True, help="Apply this header to all prior requests")
 @click.pass_context
+@CommandCategory("Composing")
 def cli(ctx, spec, name, value, all):
     """Defines a header for one or more request
     """

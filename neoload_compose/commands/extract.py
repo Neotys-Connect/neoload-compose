@@ -3,6 +3,7 @@ import click
 
 from neoload.neoload_cli_lib import cli_exception
 from compose_lib import builder_data
+from compose_lib.command_category import CommandCategory
 
     # extract --name traceId \
     #         --jsonpath ".headers['X-Amzn-Trace-Id']"
@@ -21,6 +22,7 @@ from compose_lib import builder_data
 @click.option("--default", type=str, default=None, help="The default value; by default is empty.")
 @click.option("--throw-error", is_flag=True, default=None, help="Throw an error if no value is extractable; default is true.")
 @click.pass_context
+@CommandCategory("Composing")
 def cli(ctx, name, jsonpath, xpath, regexp, from_, match_number, template, decode, extract_once, default, throw_error):
     """Defines an extractor for the most recent request
     """
