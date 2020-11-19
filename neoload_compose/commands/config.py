@@ -1,12 +1,13 @@
 import sys
 import click
 import ruamel.yaml
+import json
 
-from compose_lib import profile
+from compose_lib import profile, builder_data
 import tempfile
 import subprocess
 
-yaml = ruamel.yaml.YAML()
+yaml = ruamel.yaml.YAML(typ='unsafe')
 
 @click.group(chain=True)
 def cli():
@@ -27,7 +28,16 @@ def reset(confirm):
 @cli.command('current')
 def current():
     yaml.register_class(profile.ProfileData)
-    yaml.dump(profile.get(), sys.stdout)
+    #yaml.register_class(dict)
+    builder_data.register_classes(yaml)
+    data = {
+        'profile': profile.get(),
+        'builder': {
+            'filepath': builder_data.get_storage_filepath(),
+            #'data': builder_data.get()
+        }
+    }
+    yaml.dump(data, sys.stdout)
 
 
 @cli.command('zone')

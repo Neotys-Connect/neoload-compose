@@ -15,6 +15,7 @@ from neoload_cli_lib import cli_exception
 from compose_lib import common
 
 from neoload_compose import get_global_continue
+from compose_lib import profile
 
 __builder_config_file = os.path.join(common.__config_dir, "builder.yaml")
 
@@ -31,12 +32,19 @@ def get(throw=True):
         init()
     return __builder_data_singleton
 
+def get_storage_filepath():
+    return __builder_config_file
+
+def save(build):
+    global __builder_data_singleton
+    __builder_data_singleton = build
+    BuilderData.config_file = __builder_config_file
+    build.config_file = __builder_config_file
+    build.save()
+    return __builder_data_singleton
 
 def init():
-    global __builder_data_singleton
-    __builder_data_singleton = BuilderData()
-    BuilderData.config_file = __builder_config_file
-    return __builder_data_singleton
+    return save(BuilderData())
 
 def d_print(o):
     pass#print(o)
@@ -104,6 +112,7 @@ class HttpRequest(Action):
                 'url': self.details['url'],
                 'method': self.details['method'] if self.details['method'] != "GET" else None,
                 'body': self.details['body'],
+                'description': self.details['description'] if 'description' in self.details else None,
                 'headers': self.headers if len(self.headers) > 0 else None,
                 'extractors': self.extractors if len(self.extractors) > 0 else None,
                 'sla_profile': self.sla_profile if 'sla_profile' in self.__dict__ else None
@@ -262,7 +271,7 @@ class Container(ContainableItem):
         return dumper.represent_data(new_data)
 
 class Transaction(Container):
-    def __init__(self, parent=None, name=None, description=None, inside=False):
+    def __init__(self, parent=None, name=None, description=None, inside='last'):
         super(Transaction, self).__init__(parent=parent, name=name, description=description)
         self.inside = inside
 
@@ -348,7 +357,7 @@ class VariationPolicy(DurationPolicy):
         return dumper.represent_data(new_data)
 
 class ConstantPolicy(VariationPolicy):
-    def __init__(self, vus=5, duration=None):
+    def __init__(self, vus=5, duration="1m"):
         super(ConstantPolicy, self).__init__(duration=duration)
         self.vus = vus
 
@@ -402,12 +411,29 @@ def convert_builder_to_yaml(builder):
     # recurse for appliables
     for item in builder.stack:
 
+        parent = container_heirarchy[-1]
+
         if type(item) is Container or issubclass(type(item), Container):
-            if not item.inside and container_heirarchy[-1] != current_path.actions:
-                container_heirarchy.pop()
+            #print('item.name={}'.format(item.name))
+            #print(container_heirarchy)
+            if item.inside == 'last' and container_heirarchy[-1] != current_path.actions:
+                #container_heirarchy.pop()
+                parent = container_heirarchy[-1]
+            elif type(item) is Transaction:
+                if item.inside == 'parent':
+                    for i in range(1,len(container_heirarchy)+1):
+                        #print('ha: '.format(container_heirarchy[-i].name))
+                        if not ('inside' in container_heirarchy[-i].__dict__.keys() and container_heirarchy[-i].inside == 'parent'):
+                            parent = container_heirarchy[-i]
+                elif item.inside is not None and len(item.inside) > 0:
+                    for i in range(1,len(container_heirarchy)+1):
+                        if container_heirarchy[-i].name == item.inside:
+                            parent = container_heirarchy[-i]
+                            break
+
 
         if issubclass(type(item), ContainableItem):
-            container_heirarchy[-1].steps.append(item)
+            parent.steps.append(item)
 
         if type(item) is Container or issubclass(type(item), Container):
             container_heirarchy.append(item)
@@ -484,8 +510,12 @@ def convert_builder_to_yaml(builder):
             if holder['variation_policy'].duration is None:
                 holder['variation_policy'].duration = current_duration.duration
 
+    project_name = profile.get().default_test_setting
+    if not (project_name is not None and len(project_name.strip())):
+        project_name = "Project1"
+
     project = {
-        'name': 'Project1',
+        'name': project_name,
         'user_paths': user_paths,
         'populations': [],
         'scenarios': scenarios,
@@ -508,6 +538,14 @@ def convert_builder_to_yaml(builder):
     yaml = ruamel.yaml.YAML()
 
     yaml.encoding = None
+    register_classes(yaml)
+
+    fun = MyLogger()
+    yaml.encoding = None
+    yaml.dump(project, fun, transform=strip_python_tags)
+    return fun.readAll()
+
+def register_classes(yaml):
     yaml.register_class(UserPath)
     yaml.register_class(Container)
     yaml.register_class(HttpRequest)
@@ -521,11 +559,6 @@ def convert_builder_to_yaml(builder):
     yaml.register_class(Header)
     yaml.register_class(Extractor)
     yaml.register_class(SLA)
-
-    fun = MyLogger()
-    yaml.encoding = None
-    yaml.dump(project, fun, transform=strip_python_tags)
-    return fun.readAll()
 
 
 def apply_header_to_user_path(item, user_path):

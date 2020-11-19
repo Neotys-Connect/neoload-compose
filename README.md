@@ -22,6 +22,8 @@ NeoLoad Compose is a simple command-line interface for creating API load tests t
 ## TL;DR
 The idea is simple enough to just show with actual commands:
 ```
+nlc config zone any test-setting MyComposeTest
+
 nlc http --get http://httpbin.org/get?test=123 delay 250ms \
     ramp --to 10 --per 1s \
     duration 2m \

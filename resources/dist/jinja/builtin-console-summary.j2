@@ -8,27 +8,37 @@ Quality Status: {{summary.qualityStatus}}
 Test Statistics:
 
 Requests:{{ '\t' }}Avg. Dur{{ '\t' }}# Success{{ '\t' }}# Failed
-{{ '\t' }}{{ '\t' }}{{ "%-10s ms" | format(statistics.totalRequestDurationAverage,) -}}
+{{ '\t' }}{{ '\t' }}{{ "%-10s" | format(statistics.totalRequestDurationAverage | round(0) | int ~ 'ms') -}}
 {{ '\t' }}{{ "%-10s" | format(statistics.totalRequestCountSuccess,) -}}
 {{ '\t' }}{{ "%-10s" | format(statistics.totalRequestCountFailure,) }}
 
 Throughput:{{ '\t' }}Avg. RPS{{ '\t' }}Avg. MBPS{{ '\t' }}Total MBytes
-{{ '\t' }}{{ '\t' }}{{ "%-10s" | format(statistics.totalRequestCountPerSecond,) -}}
-{{ '\t' }}{{ "%-10s" | format(statistics.totalGlobalDownloadedBytesPerSecond / 1000000,) -}}
-{{ '\t' }}{{ "%-10s" | format(statistics.totalGlobalDownloadedBytes / 1000000,) }}
+{{ '\t' }}{{ '\t' }}{{ "%-10s" | format(statistics.totalRequestCountPerSecond | round(6),) -}}
+{{ '\t' }}{{ "%-10s" | format((statistics.totalGlobalDownloadedBytesPerSecond / 1000000) | round(6),) -}}
+{{ '\t' }}{{ "%-10s" | format((statistics.totalGlobalDownloadedBytes / 1000000) | round(6),) }}
 
 Iterations:{{ '\t' }}Success{{ '\t' }}{{ '\t' }}Failed
 {{ '\t' }}{{ '\t' }}{{ "%-10s" | format(statistics.totalIterationCountSuccess,) -}}
 {{ '\t' }}{{ "%-10s" | format(statistics.totalIterationCountFailure,) }}
 
 Transactions summary:
-User Path{{ '\t' }}Element{{ '\t' }}Count{{ '\t' }}Min{{ '\t' }}Avg{{ '\t' }}Max{{ '\t' -}}
+{% if (elements.transactions is defined) and elements.transactions %}
+
+{{ "%-15s" | format('User Path') -}}
+{{ "%-15s" | format('Transaction') -}}
+{{ '\t' }}Count{{ '\t' }}Min{{ '\t' }}Avg{{ '\t' }}Max{{ '\t' -}}
 Perc 50{{ '\t' }}Perc 90{{ '\t' }}Perc 95{{ '\t' }}Perc 99{{ '\t' -}}
 Success{{ '\t' }}S.Rate{{ '\t' }}Failure{{ '\t' }}F.Rate
 {%- for txn in elements.transactions | rejectattr('id', 'equalto', 'all-transactions') | rejectattr('aggregate.count', 'equalto', '0') | sort(attribute='avgDuration',reverse=true) %}
-{{ txn.user_path|e }}{{ '\t' }}{{ txn.name|e }}{{ '\t' }}{{ txn.aggregate.count -}}
+{{ "%-15s" | format(txn.user_path|e) -}}
+{{ "%-15s" | format(txn.name|e) -}}
+{{ '\t' }}{{ txn.aggregate.count -}}
 {{ '\t' }}{{ txn.aggregate.minDuration }}{{ '\t' }}{{ txn.aggregate.avgDuration }}{{ '\t' }}{{ txn.aggregate.maxDuration -}}
 {{ '\t' }}{{ txn.aggregate.percentile50 }}{{ '\t' }}{{ txn.aggregate.percentile90 }}{{ '\t' }}{{ txn.aggregate.percentile95 }}{{ '\t' }}{{ txn.aggregate.percentile99 -}}
-{{ '\t' }}{{ txn.aggregate.successCount }}{{ '\t' }}{{ txn.aggregate.successRate -}}
-{{ '\t' }}{{ txn.aggregate.failureCount }}{{ '\t' }}{{ txn.aggregate.failureRate -}}
+{{ '\t' }}{{ txn.aggregate.successCount }}{{ '\t' }}{{ (txn.aggregate.successRate*100) | round(3) }}%{{ "" -}}
+{{ '\t' }}{{ txn.aggregate.failureCount }}{{ '\t' }}{{ (txn.aggregate.failureRate*100) | round(3) }}%{{ "" -}}
 {%- endfor -%}
+
+{% else %}
+    No transaction data exists for this test. Try wrapping your requests in a transaction to get percentiles.
+{% endif %}

@@ -4,9 +4,9 @@ import click
 from compose_lib import builder_data, profile
 from commands import config
 import tempfile
-import subprocess
 import yaml
 import json
+from compose_lib.common import os_run, os_return
 
 from neoload.neoload_cli_lib import tools
 
@@ -29,7 +29,8 @@ def cli(ctx, name_or_id, zone, scenario, save):
     if not name_or_id:
         name_or_id = profile.get().default_test_setting
         if not name_or_id:
-            raise ValueError("No test settings [name_or_id] provided and no default test-setting configured!")
+            tools.system_exit({'code':3,'message':"No test settings [name_or_id] provided and no default test-setting configured!"})
+            return
 
     if not zone:
         zone = profile.get().default_zone
@@ -44,10 +45,12 @@ def cli(ctx, name_or_id, zone, scenario, save):
             zone = availables[0]['id']
             print("Because zone is 'any', the zone '{}' ({}) has been automatically selected.".format(zone, availables[0]['name']))
         else:
-            raise ValueError("There are no zones with available load generators and controllers!!!")
+            tools.system_exit({'code':3,'message':"There are no zones with available load generators and controllers!!!"})
+            return
 
     if not zone:
-        raise ValueError("No --zone provided and no default zone configured!")
+        tools.system_exit({'code':3,'message':"No --zone provided and no default zone configured!"})
+        return
 
     if not os_run("neoload status", status=False):
         return
@@ -71,7 +74,7 @@ def cli(ctx, name_or_id, zone, scenario, save):
 
 
     if not os_run("neoload run".format(scenario), print_stdout=True):
-        return
+        print("Test failed.")
 
 
     proc = os_return("neoload report --help", status=False)
@@ -90,29 +93,3 @@ def cli(ctx, name_or_id, zone, scenario, save):
                 status=True,
                 print_stdout=True):
             return
-
-
-def os_return(command, status=False):
-    if status:
-        print("Running '{}'".format(command))
-    p = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
-    p.wait()
-    return p
-
-def os_run(command, status=False, print_stdout=False):
-    if status:
-        print("Running '{}'".format(command))
-    try:
-        if not print_stdout:
-            proc = os_return(command, status=False)
-            (stdout,strerr) = proc.communicate()
-            if proc.returncode != 0:
-                tools.system_exit({'code':proc.returncode,'message':"{}".format(strerr)})
-                return
-        else:
-            subprocess.run(command.split(), check = True)
-
-        return True
-    except subprocess.CalledProcessError as err:
-        tools.system_exit({'code':err.returncode,'message':"{}".format(err)})
-        return False
