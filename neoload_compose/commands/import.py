@@ -12,6 +12,7 @@ import io
 
 import os
 import os.path
+from base64 import b64encode
 
 @click.group(chain=True)
 @CommandCategory("Converting")
@@ -22,6 +23,7 @@ def cli():
 
 wrap_requests_in_transactions="wrap_requests_in_transactions"
 delay_in_seconds="delay_in_seconds"
+append_headers="append_headers"
 
 @cli.command('postman')
 @click.option("--file", "-f", help="The Postman file to import")
@@ -38,12 +40,16 @@ def postman(file, filter, output_to_json, grouping, delay):
     data = None
 
     if is_url(file):
+        logging.debug("Import file is a URL")
         resp = requests.get(file, stream=True)
         data = json.load(io.BytesIO(resp.content))
     else:
+        file = os.path.expanduser(file)
         if os.path.exists(file):
             with open(file) as stm:
               data = json.load(stm)
+        else:
+            logging.debug("Import file does not exist")
 
     if data is None:
         tools.system_exit({'code':1,'message':'Could not determine data to import'})
@@ -62,12 +68,18 @@ def postman(file, filter, output_to_json, grouping, delay):
         version = re.search(r"/v(.*?)/", schema).group(1)
 
     if version and version.startswith("2."):
+        #add_headers(build, get_auth_headers(data), all=True)
         process_postman_v2(build, data, filter_parsed, options)
+
 
     builder_data.save(build)
     output = build if output_to_json else builder_data.convert_builder_to_yaml(build)
     #output = builder_data.get() if output_to_json else builder_data.convert_builder_to_yaml(builder_data.get())
     print(output)
+
+def add_headers(build, headers, all=False):
+    for key in headers:
+        build.add(builder_data.Header(name=key, value=",".join(headers[key]), all=all))
 
 
 def is_url(url):
@@ -78,7 +90,6 @@ def is_url(url):
         from urlparse import urlparse
     try:
         result = urlparse(url)
-        print(result)
         return all([result.scheme, result.netloc, result.path])
     except:
         return False
@@ -102,6 +113,7 @@ def process_postman_items(build, parent, filter, options):
             #     print('Does not match: {}'.format(item['name']))
 
             process_postman_items(build, item, filter, options)
+
 
 def item_matches_filter(item, filter):
     if len(filter) > 0:
@@ -129,6 +141,7 @@ def process_postman_item(build, parent, item, options):
         name = item['name']
         description = item['description'] if 'description' in item else None
         #print("Found item: {}".format(name))
+        parent_name = parent['name'] if 'name' in parent else 'parent'
         if 'request' in item:
             request = item['request']
             details = {
@@ -139,10 +152,12 @@ def process_postman_item(build, parent, item, options):
             }
 
             if options[wrap_requests_in_transactions]:
-                parent_name = parent['name'] if 'name' in parent else 'parent'
                 build.add(builder_data.Transaction(name=name, description=description, inside=parent_name))
 
             build.add(builder_data.HttpRequest(details))
+
+            add_headers(build, get_auth_headers(item))
+
             build.add(builder_data.Delay(time=options[delay_in_seconds]))
 
             if 'header' in request:
@@ -150,9 +165,11 @@ def process_postman_item(build, parent, item, options):
                     build.add(builder_data.Header(name=header['key'], value=header['value'], all=False))
 
         elif is_postman_item_parent(item):
-            build.add(builder_data.Transaction(name=name, description=description, inside='last'))
+            build.add(builder_data.Transaction(name=name, description=description, inside=parent_name))
+
         else:
             print("Unparseable item")
+
 
 def parse_postman_body(item):
     if 'body' in item:
@@ -185,3 +202,43 @@ def parse_filter_spec(filter_spec):
             ret[key].append(value)
 
     return ret
+
+def get_auth_headers(item, recursion_level=0):
+    ret = {}
+    #logging.debug("[{}]get_auth_headers::recursion_level = {}".format(item['name'] if 'name' in item else 'Anonymous Object',recursion_level))
+
+    inherit_auth = 'auth' not in item
+    if inherit_auth:
+        ret.update(get_auth_headers(item['__parent'], recursion_level=(recursion_level+1)))
+    else:
+        auth = item['auth']
+        auth_type = auth['type']
+        if auth_type == "noauth":
+            return ret
+        elif auth_type == "apikey":
+            apikey = auth[auth_type]
+            values = single_or_list(lambda x: (x['key'],x['value']),apikey)
+            for (key,value) in values:
+                if key not in ret:
+                    ret[key] = []
+                ret[key].append(value)
+        elif auth_type == "bearer":
+            bearer = auth[auth_type]
+            ret["Authorization"] = ["Bearer {}".format(bearer['token'])]
+        elif auth_type == "basic":
+            username = auth[auth_type]['username']
+            password = auth[auth_type]['password']
+            encoded_credentials = b64encode(bytes(f'{username}:{password}',
+                                encoding='ascii')).decode('ascii')
+            auth_header = f'Basic {encoded_credentials}'
+            ret["Authorization"] = [auth_header]
+        else:
+            logging.warn("Unsupported auth type '{}'".format(auth_type))
+
+    return ret
+
+def single_or_list(fun,node):
+    if type(node) is list:
+        return list(map(fun,node))
+    else:
+        return [fun(node)]

@@ -247,7 +247,6 @@ def convert_time_to_duration_format(in_spec):
 
     ret = ret.strip()
 
-    logging.debug("convert_time_to_duration_format, input='{}', output='{}''".format(in_spec,ret))
     return ret
 
 
@@ -457,13 +456,10 @@ def convert_builder_to_yaml(builder):
             current_request = item
 
         if type(item) is Header:
-            if current_request is None:
-                if item.all:
-                    global_headers.append(item)
+            if item.all:
+                global_headers.append(item)
             else:
-                if item.all:
-                    apply_header_to_user_path(item, current_path)
-                else:
+                if current_request is not None:
                     current_request.headers.append(item)
 
         if type(item) is Extractor:
@@ -492,6 +488,9 @@ def convert_builder_to_yaml(builder):
                 prior_sla_item.sla_profile = found_sla.name
 
         last_item = item
+
+    for header in global_headers:
+        apply_header_to_user_path(header, current_path)
 
     current_population.paths.append(current_path)
     user_paths.append(current_path)
