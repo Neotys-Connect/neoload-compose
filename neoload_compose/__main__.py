@@ -6,6 +6,7 @@ import click
 import coloredlogs
 
 from neoload.neoload_cli_lib import cli_exception,tools
+from compose_lib import common
 from compose_lib.command_category import CommandCategory
 from version import __version__
 
@@ -91,6 +92,9 @@ __global_continue = False
 @click.option('--continuation', '--continue', '-c', default=False, is_flag=True, help="Append to exiting builder queue, otherwise each separate shell call to this utility resets the builder 'working queue'")
 @click.version_option(compute_version())
 def cli(debug, continuation):
+
+    common.set_debug(debug)
+
     if debug:
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
