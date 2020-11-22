@@ -403,33 +403,29 @@ def convert_builder_to_yaml(builder):
     current_scenario = default_scenario
     global_duration = DurationPolicy("1m")
     current_duration = global_duration
+
+    all_requests_no_transactions = (
+        len(list(filter(lambda item: type(item) is HttpRequest, builder.stack)))>0
+        and
+        len(list(filter(lambda item: type(item) is Transaction, builder.stack)))<1
+    )
+
     current_request = None
     global_headers = []
     all_slas = []
 
+    temp_transaction_counter = 0
+
     # recurse for appliables
     for item in builder.stack:
 
-        parent = container_heirarchy[-1]
+        parent = get_parent_for_item(item, container_heirarchy)
 
-        if type(item) is Container or issubclass(type(item), Container):
-            #print('item.name={}'.format(item.name))
-            #print(container_heirarchy)
-            if item.inside == 'last' and container_heirarchy[-1] != current_path.actions:
-                #container_heirarchy.pop()
-                parent = container_heirarchy[-1]
-            elif type(item) is Transaction:
-                if item.inside == 'parent':
-                    for i in range(1,len(container_heirarchy)+1):
-                        #print('ha: '.format(container_heirarchy[-i].name))
-                        if not ('inside' in container_heirarchy[-i].__dict__.keys() and container_heirarchy[-i].inside == 'parent'):
-                            parent = container_heirarchy[-i]
-                elif item.inside is not None and len(item.inside) > 0:
-                    for i in range(1,len(container_heirarchy)+1):
-                        if container_heirarchy[-i].name == item.inside:
-                            parent = container_heirarchy[-i]
-                            break
-
+        if all_requests_no_transactions and type(item) is HttpRequest:
+            temp_transaction_counter += 1
+            temp_transaction = Transaction(name="Transaction {}".format(temp_transaction_counter), inside=parent.name)
+            parent.steps.append(temp_transaction)
+            parent = temp_transaction
 
         if issubclass(type(item), ContainableItem):
             parent.steps.append(item)
@@ -438,10 +434,7 @@ def convert_builder_to_yaml(builder):
             container_heirarchy.append(item)
 
         if issubclass(type(item), VariationPolicy):
-            current_scenario.populations.append({
-                'population': current_population,
-                'variation_policy': item
-            })
+            current_scenario.populations.append({'population': current_population,'variation_policy': item})
 
         if type(item) is Population:
             current_population = item
@@ -459,12 +452,10 @@ def convert_builder_to_yaml(builder):
             if item.all:
                 global_headers.append(item)
             else:
-                if current_request is not None:
-                    current_request.headers.append(item)
+                if current_request is not None: current_request.headers.append(item)
 
         if type(item) is Extractor:
-            if current_request is not None:
-                current_request.extractors.append(item)
+            if current_request is not None: current_request.extractors.append(item)
 
         if type(item) is SLAThreshold:
             # add an SLA object to all_slas
@@ -543,6 +534,30 @@ def convert_builder_to_yaml(builder):
     yaml.encoding = None
     yaml.dump(project, fun, transform=strip_python_tags)
     return fun.readAll()
+
+def get_parent_for_item(item, container_heirarchy):
+    parent = container_heirarchy[-1]
+
+    # solves for where to stick this item, based on 'inside' spec
+    if type(item) is Container or issubclass(type(item), Container):
+        #print('item.name={}'.format(item.name))
+        #print(container_heirarchy)
+        if item.inside == 'last' and container_heirarchy[-1] != current_path.actions:
+            #container_heirarchy.pop()
+            parent = container_heirarchy[-1]
+        elif type(item) is Transaction:
+            if item.inside == 'parent':
+                for i in range(1,len(container_heirarchy)+1):
+                    #print('ha: '.format(container_heirarchy[-i].name))
+                    if not ('inside' in container_heirarchy[-i].__dict__.keys() and container_heirarchy[-i].inside == 'parent'):
+                        parent = container_heirarchy[-i]
+            elif item.inside is not None and len(item.inside) > 0:
+                for i in range(1,len(container_heirarchy)+1):
+                    if container_heirarchy[-i].name == item.inside:
+                        parent = container_heirarchy[-i]
+                        break
+
+    return parent
 
 def register_classes(yaml):
     yaml.register_class(UserPath)
