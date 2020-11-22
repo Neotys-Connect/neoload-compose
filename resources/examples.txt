@@ -7,8 +7,10 @@ neoload-compose or nlc (alias)
 
 nlc transaction GetAndPost   http --get http://httpbin.org/get?test=123   delay 1s
 nlc -c extract --name traceId --jsonpath ".headers['X-Amzn-Trace-Id']" --regexp "=(.*)"
-nlc -c http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
-    delay 1s \
+nlc -c http --post http://httpbin.org/post --body '{"trace_id":"${traceId}"}'   delay 1s
+nlc current
+nlc -c ramp --to 10 --per 1s \
+    duration 2m
 
 # gets a trace token from one request and uses it in the header of another
 nlc transaction GetAndPost \
@@ -17,11 +19,11 @@ nlc transaction GetAndPost \
             --jsonpath ".headers['X-Amzn-Trace-Id']" \
             --regexp "=(.*)" \
     http --post http://httpbin.org/post --body "{'trace_id':'${traceId}'}" \
-    delay 1s \
+    delay 1s
 
 # reads the contents of a file in and uses them as the body content of a PUT
 cat ./body_data.json | nlc -c \
-    transaction PostBodyFile
+    transaction PostBodyFile \
     http --put http://httpbin.org/put --body - \
     delay 1s
 
@@ -29,10 +31,10 @@ cat ./body_data.json | nlc -c \
 nlc -c \
     transaction AuthenticateUNP \
     variable --name creds \
-      file --columns uname,pwd ./recently_generated_credentials.csv
+      file --columns uname,pwd ./recently_generated_credentials.csv \
     http --post http://httpbin.org/post?action=login \
          --body "{'username':'${creds.uname}','password':'${creds.pwd}'}" \
-    delay 1s \
+    delay 1s
 
 # read the contents of a file in as a static API token
 cat ./recently_generated_token.txt | nlc -c \
@@ -40,7 +42,7 @@ cat ./recently_generated_token.txt | nlc -c \
     variable --name api_token constant - \
     http --post http://httpbin.org/post?action=login \
     header "api_token=${api_token}" \
-    delay 1s \
+    delay 1s
 
 # adds variation & duration policies then prints out the YAML before running it
 nlc -c \
@@ -51,14 +53,14 @@ nlc -c \
 
 # continuation, particularly when reading large contents from STDIN
 nlc transaction One http --get http://httpbin.org/get?test=123 delay 1s
-cat ~/some.json | nlc --continue transaction Two http --post http://httpbin.org/post --body - delay 250ms \
+cat ~/some.json | nlc --continue transaction Two http --post http://httpbin.org/post --body - delay 250ms
 
 # add a header, and with --all apply to all prior builder requests
 nlc -c header --all --name "accept" --value "application/json"
 ...
 
 # add SLAs; by default, applies to most recent request or container only, unless --all is used
-nlc -c sla --all --threshold error-rate --warn 5 --fail 10 my_sla
+nlc -c sla --all --name geo_3rd_party threshold --error-rate --warn 5 --fail 10 my_sla
 # apply a specific sla (defined up front or prior) to a request or container
 nlc -c transaction One http --get http://httpbin.org/get?test=123 --sla some_specific_sla delay 1s
 
