@@ -16,6 +16,7 @@ NeoLoad Compose is a simple command-line interface for creating API load tests t
   * [Credentials (Username / Password) from CSV file](#credentials-username--password-from-csv-file)
   * [Secret token from a file as API authentication Header](#secret-token-from-a-file-as-api-authentication-header)
   * [Add ramp and duration (Scenario data)](#add-ramp-and-duration-scenario-data)
+- [Importing from Postman](#importing-from-postman)
 
 <!-- tocstop -->
 
@@ -137,3 +138,17 @@ nlc -c \
     run --zone any MyTest
 
 ```
+
+## Importing from Postman
+In order to facilitate easy transition of test assets from functional API testing
+ tools such as Postman, neoload-compose can import various elements of other test suites.
+
+DISCLAIMER: not all aspects of Postman collections are supported at this time, such as
+ custom post-execution test steps, advanced authentication methods, etc.
+
+You will need to export a Postman collection to a JSON file first.
+```
+nlc import postman --filter="name=Request Methods|name=Headers"  -f "~/Downloads/NeoLoadCompose.postman_collection.json"
+```
+
+NOTE: the 'filter' argument allows you to focus on specific groups of tests.

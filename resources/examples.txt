@@ -76,6 +76,9 @@ nlc run
 
 TODO:
 - transpose/import?
+  - postman/SUI os
+  - CSV files
+
 - extractors
 - file variables
 - other variables
