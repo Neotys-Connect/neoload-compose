@@ -92,10 +92,9 @@ def cli(ctx, name_or_id, zone, scenario, save, just_report_last):
 
         template = pkg_resources.resource_filename(__name__, 'resources/dist/jinja/builtin-console-summary.j2')
 
-        if not os_run(neoload_base_cmd + " report --template {} --filter '{}' --max-rps {} cur".format(
+        if not os_run(neoload_base_cmd + " report --template {} --filter '{}' cur".format(
                     template,
-                    'exclude=events,slas,all_requests,ext_data,controller_points',
-                    5
+                    'exclude=events,slas,all_requests,ext_data,controller_points'
                 ),
                 status=True,
                 print_stdout=True):
