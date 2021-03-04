@@ -74,7 +74,7 @@ Success{{ '\t' }}S.Rate{{ '\t' }}Failure{{ '\t' }}F.Rate
 {{ '\t' }}{{ txn.aggregate.minDuration }}{{ '\t' }}{{ txn.aggregate.avgDuration }}{{ '\t' }}{{ txn.aggregate.maxDuration -}}
 {{ '\t' }}{{ txn.aggregate.percentile50 }}{{ '\t' }}{{ txn.aggregate.percentile90 }}{{ '\t' }}{{ txn.aggregate.percentile95 }}{{ '\t' }}{{ txn.aggregate.percentile99 -}}
 <text color="Fore.{% if(txn.aggregate.failureCount<1) -%}GREEN{% else -%}RED{% endif -%}">{{ "" -}}
-{{ '\t' }}{{ txn.aggregate.successCount }}{{ '\t' }}{{ (txn.aggregate.successRate*100) | round(3) }}%{{ "" -}}
+{{ '\t' }}{{ txn.aggregate.successCount }}{{ '\t' }}{{ (txn.aggregate.successRate) | round(3) }}%{{ "" -}}
 {{ '\t' }}{{ txn.aggregate.failureCount }}{{ '\t' }}{{ (txn.aggregate.failureRate*100) | round(3) }}%{{ "" -}}
 </text>{{ "" -}}
 {%- endfor -%}
