@@ -29,7 +29,7 @@ setup(
         'write_to_template': '__version__ = "{version}"',
         'tag_regex': r'^(?P<prefix>v)?(?P<version>[^\+]+)(?P<suffix>.*)?$'
     },
-    url='https://github.com/paulsbruce/neoload-compose',
+    url='https://github.com/Neotys-Connect/neoload-compose',
     license='Apache 2.0',
     author='Paul Bruce',
     author_email='',
@@ -51,7 +51,9 @@ setup(
         'requests_toolbelt',
         'urllib3',
         'neoload',
-        'colorama'
+        'colorama',
+        'ruamel.yaml',
+        'jsonpickle'
     ],
     long_description_content_type='text/markdown',
     long_description=long_description

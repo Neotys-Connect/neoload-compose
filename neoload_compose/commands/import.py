@@ -24,6 +24,8 @@ def cli():
 wrap_requests_in_transactions="wrap_requests_in_transactions"
 delay_in_seconds="delay_in_seconds"
 append_headers="append_headers"
+add_javascript_lib_postman="add_javascript_lib_postman"
+javascript_lib_postman_var_name='postman'
 
 @cli.command('postman')
 @click.option("--file", "-f", help="The Postman file to import")
@@ -60,6 +62,7 @@ def postman(file, filter, output_to_json, grouping, delay):
     options = {}
     options[wrap_requests_in_transactions] = (grouping == "NONE")
     options[delay_in_seconds] = delay
+    options[add_javascript_lib_postman] = False
 
     version = None
 
@@ -70,6 +73,14 @@ def postman(file, filter, output_to_json, grouping, delay):
     if version and version.startswith("2."):
         #add_headers(build, get_auth_headers(data), all=True)
         process_postman_v2(build, data, filter_parsed, options)
+
+    if options[add_javascript_lib_postman] == True:
+        build.add(builder_data.VariableTypeJavascript(
+            name=javascript_lib_postman_var_name,
+            description='A javascript library for running postman tests using the Node sidecar',
+            script=get_postman_var_script_source(),
+            change_policy='each_use'
+        ))
 
 
     builder_data.save(build)
@@ -158,6 +169,19 @@ def process_postman_item(build, parent, item, options):
 
             add_headers(build, get_auth_headers(item))
 
+            if 'event' in item:
+                logging.debug("events")
+                for event in item['event']:
+                    logging.debug("event: {}".format(event))
+                    if event['listen'] == "test" and 'script' in event:
+                        script = event['script']
+                        if 'type' in script and script['type'] == "text/javascript" and 'exec' in script:
+                            options[add_javascript_lib_postman] = True
+                            build.add(builder_data.JavascriptAction(
+                                name="Postman Tests",description="",
+                                script=get_postman_action_script_source(script['exec'])
+                            ))
+
             build.add(builder_data.Delay(time=options[delay_in_seconds]))
 
             if 'header' in request:
@@ -242,3 +266,17 @@ def single_or_list(fun,node):
         return list(map(fun,node))
     else:
         return [fun(node)]
+
+def get_postman_var_script_source():
+    return """
+function evaluate(){var t={};return new function(){this.static=get_postman_results_(t)}}function get_postman_results_(t){var e=context,s=e.variableManager,r=function(t){logger.debug(t)},a=java.nio.charset.Charset.defaultCharset(),o=function(t){e.fail(t)},n="get_postman_result_",u=s.getValue("__response___json")+"",i=s.getValue("__postman___tests")+"";u||o("no __response__ data"),i||o("no __postman___tests data");var c=u+"---CONTEXT---"+JSON.stringify({tests:i,pm:t});r(n+"[stdin]: "+c);var l=new java.lang.ProcessBuilder("/usr/local/bin/node","/nlpm/nlpm-exec.js").start(),_=new java.io.BufferedWriter(new java.io.OutputStreamWriter(l.getOutputStream(),"UTF-8"));_.write(c),_.flush(),_.close();var g=org.apache.commons.io.IOUtils.toString(l.getErrorStream(),a),p=org.apache.commons.io.IOUtils.toString(l.getInputStream(),a);r(n+"[stdout]: "+p),r(n+"[stderr]: "+g),g&&null!=g&&g.length>0&&o(n+"[stderr]: "+g);var m={success:!1};try{var d=JSON.parse(p);if(m.context=d,m.success=1==d.summary.all,!m.success)throw"Not all tests passed."}catch(t){m.error=t}return JSON.stringify(m)}
+    """
+
+def get_postman_action_script_source(tests_lines):
+    pmscript_encoded = urllib.parse.quote("\n".join(tests_lines))
+    action_script = """
+var e = '{urlencoded}'
+var c = context; var vm = c.variableManager; var j = JSON; vm.setValue("__postman___tests",e); var r = j.parse(vm.getValue("{javascript_lib_postman_var_name}.static"))
+if(!(r && r.success && r.success == true)) c.fail(r.error +': ' + j.stringify(r, null, '\t'))
+    """
+    return action_script.format(urlencoded=pmscript_encoded,javascript_lib_postman_var_name=javascript_lib_postman_var_name)

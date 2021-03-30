@@ -233,6 +233,55 @@ class Delay(Action):
 
         return dumper.represent_data(new_data)
 
+class JavascriptAction(Action):
+    def __init__(self, script, name=None, description=None):
+        super(JavascriptAction, self).__init__()
+        self.name = name
+        self.description = description
+        self.script = script
+
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        new_data = common.remove_empty({
+            'name': self.name,
+            'description': self.description,
+            'script': self.script
+        })
+
+        return dumper.represent_data(new_data)
+
+class Variable():
+    def __init__(self, name, description=None):
+        self.name = name
+        self.description = description
+        pass
+
+class VariableWithChangePolicy(Variable):
+    def __init__(self, name, change_policy, description=None):
+        super(VariableWithChangePolicy, self).__init__(name=name,description=description)
+        self.change_policy = change_policy
+
+
+class VariableTypeJavascript(VariableWithChangePolicy):
+    def __init__(self, name, script, change_policy, description=None):
+        super(VariableTypeJavascript, self).__init__(name=name, change_policy=change_policy, description=description)
+        self.name = name
+        self.description = description
+        self.script = script
+
+    @classmethod
+    def to_yaml(cls,dumper,self):
+        new_data = {
+            'javascript': common.remove_empty({
+                'name': self.name,
+                'description': self.description,
+                'script': self.script,
+                'change_policy': self.change_policy
+            })
+        }
+
+        return dumper.represent_data(new_data)
+
 def convert_time_to_duration_format(in_spec):
     matches = re.finditer("ms|d|h|m|s", in_spec)
     ret = in_spec
@@ -403,6 +452,7 @@ def convert_builder_to_yaml(builder):
     current_scenario = default_scenario
     global_duration = DurationPolicy("1m")
     current_duration = global_duration
+    global_variables = []
 
     all_requests_no_transactions = (
         len(list(filter(lambda item: type(item) is HttpRequest, builder.stack)))>0
@@ -419,7 +469,7 @@ def convert_builder_to_yaml(builder):
     # recurse for appliables
     for item in builder.stack:
 
-        parent = get_parent_for_item(item, container_heirarchy)
+        parent = get_parent_for_item(item, container_heirarchy, current_path)
 
         if all_requests_no_transactions and type(item) is HttpRequest:
             temp_transaction_counter += 1
@@ -478,6 +528,9 @@ def convert_builder_to_yaml(builder):
             if type(prior_sla_item) is Transaction or type(prior_sla_item) is HttpRequest:
                 prior_sla_item.sla_profile = found_sla.name
 
+        if type(item) is Variable or issubclass(type(item), Variable):
+            global_variables.append(item)
+
         last_item = item
 
     for header in global_headers:
@@ -509,8 +562,12 @@ def convert_builder_to_yaml(builder):
         'user_paths': user_paths,
         'populations': [],
         'scenarios': scenarios,
-        'sla_profiles': []
+        'sla_profiles': [],
+        'variables': global_variables
     }
+
+    if len(project['variables']) < 1:
+        del project['variables']
 
     for scn in scenarios:
         for holder in scn.populations:
@@ -535,7 +592,7 @@ def convert_builder_to_yaml(builder):
     yaml.dump(project, fun, transform=strip_python_tags)
     return fun.readAll()
 
-def get_parent_for_item(item, container_heirarchy):
+def get_parent_for_item(item, container_heirarchy, current_path):
     parent = container_heirarchy[-1]
 
     # solves for where to stick this item, based on 'inside' spec
@@ -573,6 +630,8 @@ def register_classes(yaml):
     yaml.register_class(Header)
     yaml.register_class(Extractor)
     yaml.register_class(SLA)
+    yaml.register_class(VariableTypeJavascript)
+    yaml.register_class(JavascriptAction)
 
 
 def apply_header_to_user_path(item, user_path):

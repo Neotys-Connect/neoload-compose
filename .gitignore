@@ -8,3 +8,6 @@ Pipfile.lock
 .coverage
 coverage.xml
 htmlcov/
+build/
+dist/
+neoload_compose/version.py
