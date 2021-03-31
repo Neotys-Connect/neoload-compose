@@ -6,10 +6,11 @@ from commands import config
 import tempfile
 import yaml
 import json
-from compose_lib.common import os_run, os_return
+from compose_lib.common import os_run, os_return, get_resource
 from compose_lib.command_category import CommandCategory
 
 from neoload.neoload_cli_lib import tools
+import logging
 
 @click.command()
 @click.argument("name_or_id", required=False)
@@ -25,6 +26,10 @@ def cli(ctx, name_or_id, zone, scenario, save, just_report_last):
     builder_data.register_context(ctx, auto_reset=False)
 
     neoload_base_cmd = "neoload " + ("--debug " if common.get_debug() else "")
+
+    template = get_resource(__name__,"resources/dist/jinja/builtin-console-summary.j2")
+    if template is not None:
+        logging.debug("Using template: {}".format(template))
 
     if not just_report_last:
         if name_or_id and save:
@@ -85,20 +90,18 @@ def cli(ctx, name_or_id, zone, scenario, save, just_report_last):
 
     proc = os_return(neoload_base_cmd + " report --help", status=False)
     (stdout,strerr) = proc.communicate()
-    if proc.returncode != 0 or 'Error:' in stdout.decode("UTF-8"):
+    outtext = stdout.decode("UTF-8")
+    if proc.returncode != 0 or 'Error:' in outtext or 'failed to start' in outtext:
         print("Test ran, but could not produce final (pretty) report. {}".format("" if strerr is None else strerr))
     else:
-        import pkg_resources
-
-        template = pkg_resources.resource_filename(__name__, 'resources/dist/jinja/builtin-console-summary.j2')
-
-        if not os_run(neoload_base_cmd + " report --template {} --filter '{}' cur".format(
-                    template,
-                    'exclude=events,slas,all_requests,ext_data,controller_points'
-                ),
-                status=True,
-                print_stdout=True):
-            return
+        if template is not None:
+            if not os_run(neoload_base_cmd + " report --template {} --filter '{}' cur".format(
+                        template,
+                        'exclude=events,slas,all_requests,ext_data,controller_points'
+                    ),
+                    status=True,
+                    print_stdout=True):
+                return
 
 __pause_output = False
 def check_run_line(line_text):
