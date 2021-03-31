@@ -11,6 +11,7 @@ from compose_lib.command_category import CommandCategory
 
 from neoload.neoload_cli_lib import tools
 import logging
+import tempfile
 
 @click.command()
 @click.argument("name_or_id", required=False)
@@ -18,17 +19,20 @@ import logging
 @click.option('--scenario', required=False, help="The scenario to run.")
 @click.option('--save', is_flag=True, help="Save this as the default zone and test-setting")
 @click.option('--just-report-last', is_flag=True, default=False, help="Save this as the default zone and test-setting")
+@click.option('--template', default=None, help="Template to use for post-test console summary")
 @click.pass_context
 @CommandCategory("Validating")
-def cli(ctx, name_or_id, zone, scenario, save, just_report_last):
+def cli(ctx, name_or_id, zone, scenario, save, just_report_last, template):
     """Runs whatever is in the current buffer
     """
     builder_data.register_context(ctx, auto_reset=False)
 
     neoload_base_cmd = "neoload " + ("--debug " if common.get_debug() else "")
 
-    template = get_resource(__name__,"resources/dist/jinja/builtin-console-summary.j2")
+    template_text = get_resource(__name__,"resources/dist/jinja/builtin-console-summary.j2")
     if template is not None:
+        template_text = None
+    if template_text is not None:
         logging.debug("Using template: {}".format(template))
 
     if not just_report_last:
@@ -94,14 +98,26 @@ def cli(ctx, name_or_id, zone, scenario, save, just_report_last):
     if proc.returncode != 0 or 'Error:' in outtext or 'failed to start' in outtext:
         print("Test ran, but could not produce final (pretty) report. {}".format("" if strerr is None else strerr))
     else:
-        if template is not None:
-            if not os_run(neoload_base_cmd + " report --template {} --filter '{}' cur".format(
-                        template,
-                        'exclude=events,slas,all_requests,ext_data,controller_points'
-                    ),
-                    status=True,
-                    print_stdout=True):
+        if template_text is not None:
+            with tempfile.NamedTemporaryFile(mode='w+b') as temp:
+                temp.write(template_text.encode("UTF-8"))
+                temp.flush()
+                if not run_with_template(neoload_base_cmd,temp.name):
+                    return
+        elif template is not None:
+            if not run_with_template(neoload_base_cmd,template):
                 return
+        else:
+            print("No template found for post-test results.")
+
+def run_with_template(neoload_base_cmd,template_filepath):
+    ret = os_run(neoload_base_cmd + " report --template {} --filter '{}' cur".format(
+                template_filepath,
+                'exclude=events,slas,all_requests,ext_data,controller_points'
+            ),
+            status=True,
+            print_stdout=True)
+    return ret
 
 __pause_output = False
 def check_run_line(line_text):

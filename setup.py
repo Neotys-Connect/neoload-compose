@@ -53,7 +53,8 @@ setup(
         'neoload',
         'colorama',
         'ruamel.yaml',
-        'jsonpickle'
+        'jsonpickle',
+        'importlib-resources'
     ],
     long_description_content_type='text/markdown',
     long_description=long_description

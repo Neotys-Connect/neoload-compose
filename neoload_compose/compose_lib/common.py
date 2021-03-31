@@ -10,7 +10,9 @@ import asyncio
 from datetime import datetime
 import html
 
-import pkg_resources, os
+import os
+from importlib_resources import files
+
 
 __conf_name = "neoload-compose"
 __version = "1.0"
@@ -180,16 +182,14 @@ def parse_command(command):
 def find_nlg_app():
     return "/Applications/NeoLoad 7.6/bin/NeoLoadGUI.app/Contents/MacOS/NeoLoad"
 
+def get_resource_string(module, name):
+    """Load a textual resource file."""
+    return files(module).joinpath(name).read_text(encoding="utf-8")
+
 def get_resource(module_name,relative_path):
-    proc = os_return("pip show neoload-compose", status=False)
-    (stdout,strerr) = proc.communicate()
-    outtext = stdout.decode("UTF-8")
-    location = list(filter(lambda x: x.startswith("Location: "),outtext.split("\n")))[0].replace("Location: ","")
 
-    ret = os.path.join(location,pkg_resources.resource_filename(module_name, relative_path))
-
-    if os.path.exists(ret):
-        return ret
-    else:
-        logging.error("Could not find resource: {} for module {}".format(relative_path,__name__))
-        return None
+    path = relative_path.split(os.path.sep)
+    namespace = ".".join(path[:-1])
+    file = path[-1]
+    logging.debug({'path':path,'namespace':namespace,'file':file})
+    return get_resource_string(namespace, file)
