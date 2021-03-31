@@ -9,11 +9,6 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='neoload-compose',
-    package_data={'': [
-        'LICENSE',
-        'README.md',
-        'resources/dist/*'
-    ]},
     include_package_data=True,
     packages=find_packages(exclude=("tests",)),
     entry_points={
