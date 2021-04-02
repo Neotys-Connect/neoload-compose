@@ -9,5 +9,5 @@ Pipfile.lock
 coverage.xml
 htmlcov/
 build/
-dist/
+/dist/
 neoload_compose/version.py

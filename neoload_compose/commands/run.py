@@ -6,7 +6,7 @@ from commands import config
 import tempfile
 import yaml
 import json
-from compose_lib.common import os_run, os_return, get_resource
+from compose_lib.common import os_run, os_return, get_resource_as_string
 from compose_lib.command_category import CommandCategory
 
 from neoload.neoload_cli_lib import tools
@@ -29,7 +29,7 @@ def cli(ctx, name_or_id, zone, scenario, save, just_report_last, template):
 
     neoload_base_cmd = "neoload " + ("--debug " if common.get_debug() else "")
 
-    template_text = get_resource(__name__,"resources/dist/jinja/builtin-console-summary.j2")
+    template_text = get_resource_as_string("resources/dist/jinja/builtin-console-summary.j2")
     if template is not None:
         template_text = None
     if template_text is not None:

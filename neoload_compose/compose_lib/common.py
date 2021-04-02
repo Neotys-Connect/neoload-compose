@@ -182,14 +182,16 @@ def parse_command(command):
 def find_nlg_app():
     return "/Applications/NeoLoad 7.6/bin/NeoLoadGUI.app/Contents/MacOS/NeoLoad"
 
-def get_resource_string(module, name):
+def get_resource_as_string(relative_path):
     """Load a textual resource file."""
-    return files(module).joinpath(name).read_text(encoding="utf-8")
-
-def get_resource(module_name,relative_path):
+    try:
+        import importlib.resources as pkg_resources
+    except ImportError:
+        # Try backported to PY<37 `importlib_resources`.
+        import importlib_resources as pkg_resources
 
     path = relative_path.split(os.path.sep)
     namespace = ".".join(path[:-1])
     file = path[-1]
     logging.debug({'path':path,'namespace':namespace,'file':file})
-    return get_resource_string(namespace, file)
+    return pkg_resources.read_text(namespace, file)
